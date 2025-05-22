@@ -1,1 +1,41 @@
-miau pyhton
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Constants
+T = 365.25  # dies
+epsilon = 0.0167
+e = np.radians(23.45)
+P = np.radians(-167.1)
+
+# Dies de l'any
+N = np.arange(1, 366)
+M = 2 * np.pi * (N - 3) / T  # anomalia mitjana
+
+# EOT 1: Amb inclinació i excentricitat
+EOT = (2 * epsilon * np.sin(M) + np.tan(e / 2)**2 * np.sin(2 * (M + P))) * (180 / np.pi) * 4
+
+# EOT 2: Només excentricitat
+epsilon2 = 0.0167
+e2 = np.radians(0)
+EOT2 = (2 * epsilon2 * np.sin(M) + np.tan(e2 / 2)**2 * np.sin(2 * (M + P))) * (180 / np.pi) * 4
+
+# EOT 3: Només inclinació
+epsilon3 = 0
+e3 = np.radians(23.45)
+EOT3 = (2 * epsilon3 * np.sin(M) + np.tan(e3 / 2)**2 * np.sin(2 * (M + P))) * (180 / np.pi) * 4
+
+# Plot
+plt.figure(figsize=(10, 5))
+plt.plot(N, EOT, color='black', linewidth=2, label=r'$\varepsilon=0{,}0167,\ e=23{,}45^\circ$')
+plt.plot(N, EOT2, color='red', linestyle='--', alpha=0.6, label=r'$\varepsilon=0{,}0167,\ e=0^\circ$')
+plt.plot(N, EOT3, color='blue', linestyle='--', alpha=0.6, label=r'$\varepsilon=0,\ e=23{,}45^\circ$')
+
+plt.axhline(0, color='gray', linewidth=0.5)
+plt.title('Equació del Temps 2025')
+plt.xlabel('Dia de l\'any')
+plt.ylabel('EOT (min)')
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
