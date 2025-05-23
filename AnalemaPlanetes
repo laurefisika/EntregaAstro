@@ -1,0 +1,284 @@
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.special import jn
+
+# Orbital parameters
+e = 0.0167  # Earth's orbital eccentricity
+eps_deg = 23.44  # Obliquity in degrees
+eps = np.radians(eps_deg)
+varpi_deg = 102.937348 + 180  # Geocentric perihelion longitude for 2025
+varpi = np.radians(varpi_deg)
+N_terms = 20  # Bessel series terms
+tau = 1.07  # Time of perihelion after Jan 1st (in days)
+
+
+# Time
+days = np.linspace(0, 365.25, 1000)
+M = 2 * np.pi * (days - tau) / 365.25  # Mean anomaly
+
+# Compute E(M) using Bessel series
+E_series = M.copy()
+for n in range(1, N_terms + 1):
+    E_series += (2 / n) * jn(n, n * e) * np.sin(n * M)
+
+# True anomaly
+nu = np.arctan2(np.sqrt(1 - e**2) * np.sin(E_series), np.cos(E_series) - e)
+
+# Ecliptic longitude of the Sun
+lambda_sun = (nu + varpi) % (2 * np.pi)
+
+# Right ascension
+alpha = np.unwrap(np.arctan2(np.cos(eps) * np.sin(lambda_sun), np.cos(lambda_sun)))
+
+# Equation of Time in minutes
+EOT_rad =  M  -alpha
+EOT_min = EOT_rad * (1440 / (2 * np.pi))
+EOT_min -= np.mean(EOT_min)
+
+# Declination
+delta = np.arcsin(np.sin(eps) * np.sin(lambda_sun))
+
+# Horizontal position in degrees (EOT: 4 min = 1 deg)
+x = EOT_min / 4  # East-West (deg)
+y = np.degrees(delta)  # Declination (deg)
+
+
+
+
+
+
+# Constants
+A1 = 7.66  # Amplitude of eccentricity component [minutes]
+A2 = 9.87  # Amplitude of obliquity component [minutes]
+
+# Convert amplitudes to radians
+A1_rad = A1 * (2 * np.pi / 1440)
+A2_rad = A2 * (2 * np.pi / 1440)
+
+# Components
+y1 = -A1_rad * np.sin(M)  # Eccentricity
+y2 = A2_rad * np.sin(2 * (M + varpi))  # Obliquity with phase shift
+ytot = y1 + y2
+
+# Convert to minutes
+y1_min = y1 * (1440 / (2 * np.pi))
+y2_min = y2 * (1440 / (2 * np.pi))
+ytot_min = ytot * (1440 / (2 * np.pi))
+
+
+# Índexs corresponents als dies clau
+key_days = [79, 172, 266, 355]
+labels = ['Equinocci de primavera', "Solstici d'estiu", 'Equinocci de tardor', "Solstici d'hivern"]
+
+
+
+# Plot Analemma (elevation vs azimuth)
+
+lat = np.radians(41.5)  # Bellaterra's latitude
+hora_local = int(input("What time (in hours) do you want to see the analemma from Bellaterra? "))  # hora local
+
+# Solar hour angle (in degrees)
+H = 15 * (hora_local + EOT_min/60 - 12)
+H_rad = np.radians(H)
+
+# Solar elevation (degrees)
+elevation = np.degrees(np.arcsin(np.sin(lat) * np.sin(delta) + np.cos(lat) * np.cos(delta) * np.cos(H_rad)))
+
+# Solar azimuth (degrees)
+azimuth = np.degrees(np.arctan2(
+    np.sin(H_rad),
+    np.cos(H_rad)*np.sin(lat) - np.tan(delta)*np.cos(lat)
+))
+azimuth = (azimuth + 360) % 360
+
+
+
+
+# Definitions for other planets
+planets = {
+    'Mercuri': {'e': 0.2056, 'varpi_deg': 77.456 + 180, 'eps_deg': 0.034, 'tau': 0.0},
+    'Mart': {'e': 0.0935, 'varpi_deg': 336.04084 + 180, 'eps_deg': 25.19, 'tau': 16.5},
+    'Júpiter': {'e': 0.0487, 'varpi_deg': 14.75385 + 180, 'eps_deg': 3.13, 'tau': 14.0},
+    'Saturn': {'e': 0.0520, 'varpi_deg': 92.43194 + 180, 'eps_deg': 26.73, 'tau': 27.0},
+}
+
+
+
+
+
+# Loop over planets
+for planet, params in planets.items():
+    e_planet = params['e']
+    varpi_planet = np.radians(params['varpi_deg'])
+    eps_planet = np.radians(params['eps_deg'])
+    tau_planet = params['tau']
+    if planet == "Mart":  
+        tau_planet = params['tau']
+        # Mars orbital period in Earth days  
+        mars_period = 686.98  # Mars orbital period  
+        days = np.linspace(0, mars_period, 1000)  
+        
+        # Mars specific parameters  
+        e_planet = 0.0934  # Mars eccentricity  
+        eps_planet = np.radians(25.19)  # Mars obliquity  
+        varpi_planet= np.radians(286.502)  # Mars longitude of perihelion  
+        
+        # Recompute Mean anomaly with planet's tau
+        M_planet = 2 * np.pi * (days - tau_planet) / mars_period  # Still assuming Earth's 365-day year
+
+        # Compute E(M) for the planet
+        E_series = M_planet.copy()
+        for n in range(1, N_terms + 1):
+            E_series += (2 / n) * jn(n, n * e_planet) * np.sin(n * M_planet)
+
+        # True anomaly
+        nu = np.arctan2(np.sqrt(1 - e_planet**2) * np.sin(E_series), np.cos(E_series) - e_planet)
+
+        # Ecliptic longitude
+        lambda_sun = (nu + varpi_planet) % (2 * np.pi)
+
+        # Right ascension
+        alpha = np.unwrap(np.arctan2(np.cos(eps_planet) * np.sin(lambda_sun), np.cos(lambda_sun)))
+        
+        # Equation of time
+        EOT_rad = M_planet - alpha
+        EOT_min = EOT_rad * (1440 / (2 * np.pi))
+        EOT_min -= np.mean(EOT_min)
+
+        # Declination
+        delta = np.arcsin(np.sin(eps_planet) * np.sin(lambda_sun))
+
+        # Horizontal position
+        x = EOT_min / 4  # EOT in degrees
+        y = np.degrees(delta)
+        # For Mars specifically:  
+
+        # Plot
+        plt.figure(figsize=(8, 10))
+        sc = plt.scatter(x, y, color= 'red', label=f'Analema solar de {planet}')
+        
+        
+        plt.xlabel('Azimut')
+        plt.ylabel('Altitut')
+        plt.title(f'Analema solar a {planet}')
+        plt.grid(True)
+        plt.tick_params(direction='in', top=True, right=True)
+        plt.text(0.05, 0.9, f'$\\varepsilon = {e_planet:.4f}$\n$\ e = {np.degrees(eps_planet):.2f}^\\circ$',
+            transform=plt.gca().transAxes, fontsize=14, verticalalignment='top')
+
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+        
+        
+        
+        
+        
+        
+        
+        
+        
+
+    if planet == "Jupiter":  
+        tau_planet = params['tau']
+        # Mars orbital period in Earth days  
+        mars_period = 4331  # Mars orbital period  
+        days = np.linspace(0, mars_period, 5000)  
+        
+        # Mars specific parameters  
+        e_planet = params['e']  # Mars eccentricity  
+        eps_planet = np.radians(params['eps_deg'])  # Mars obliquity  
+        varpi_planet= np.radians(params['varpi_deg'])  # Mars longitude of perihelion  
+        
+        # Recompute Mean anomaly with planet's tau
+        M_planet = 2 * np.pi * (days - tau_planet) / mars_period  # Still assuming Earth's 365-day year
+
+        # Compute E(M) for the planet
+        E_series = M_planet.copy()
+        for n in range(1, N_terms + 1):
+            E_series += (2 / n) * jn(n, n * e_planet) * np.sin(n * M_planet)
+
+        # True anomaly
+        nu = np.arctan2(np.sqrt(1 - e_planet**2) * np.sin(E_series), np.cos(E_series) - e_planet)
+
+        # Ecliptic longitude
+        lambda_sun = (nu + varpi_planet) % (2 * np.pi)
+
+        # Right ascension
+        alpha = np.unwrap(np.arctan2(np.cos(eps_planet) * np.sin(lambda_sun), np.cos(lambda_sun)))
+        
+        # Equation of time
+        EOT_rad = M_planet - alpha
+        EOT_min = EOT_rad * (1440 / (2 * np.pi))
+        EOT_min -= np.mean(EOT_min)
+
+        # Declination
+        delta = np.arcsin(np.sin(eps_planet) * np.sin(lambda_sun))
+
+        # Horizontal position
+        x = EOT_min / 4  # EOT in degrees
+        y = np.degrees(delta)
+        # For Mars specifically:  
+
+        # Plot
+        plt.figure(figsize=(8, 10))
+        sc = plt.scatter(x, y, color= 'brown', label=f'Solar Analemma on {planet}')
+       
+        plt.xlabel('Desviació del temps solar aparent [deg]')
+        plt.ylabel('Declinació solar [deg]')
+        plt.title(f'Analemm solar a {planet}')
+        plt.grid(True)
+        plt.tick_params(direction='in', top=True, right=True)
+        plt.text(0.05, 0.9, f'$e = {e_planet:.4f}$\n$\\varepsilon = {np.degrees(eps_planet):.2f}^\\circ$',
+            transform=plt.gca().transAxes, fontsize=10, verticalalignment='top')
+
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+    # Recompute Mean anomaly with planet's tau
+    M_planet = 2 * np.pi * (days - tau_planet) / 365.25  # Still assuming Earth's 365-day year
+
+    # Compute E(M) for the planet
+    E_series = M_planet.copy()
+    for n in range(1, N_terms + 1):
+        E_series += (2 / n) * jn(n, n * e_planet) * np.sin(n * M_planet)
+
+    # True anomaly
+    nu = np.arctan2(np.sqrt(1 - e_planet**2) * np.sin(E_series), np.cos(E_series) - e_planet)
+
+    # Ecliptic longitude
+    lambda_sun = (nu + varpi_planet) % (2 * np.pi)
+
+    # Right ascension
+    alpha = np.unwrap(np.arctan2(np.cos(eps_planet) * np.sin(lambda_sun), np.cos(lambda_sun)))
+    
+    # Equation of time
+    EOT_rad = M_planet - alpha
+    EOT_min = EOT_rad * (1440 / (2 * np.pi))
+    EOT_min -= np.mean(EOT_min)
+
+    # Declination
+    delta = np.arcsin(np.sin(eps_planet) * np.sin(lambda_sun))
+
+    # Horizontal position
+    x = EOT_min / 4  # EOT in degrees
+    y = np.degrees(delta)
+    # For Mars specifically:  
+
+    # Plot
+    plt.figure(figsize=(8, 10))
+    sc = plt.scatter(x, y, color='green', label=f'Analema solar de {planet}')
+   
+    plt.xlabel('Desviació del temps solar aparent [deg]')
+    plt.ylabel('Declinació solar [deg]')
+    plt.title(f'Analema solar a {planet}')
+    plt.grid(True)
+    plt.tick_params(direction='in', top=True, right=True)
+    plt.text(0.05, 0.9, f'$\\varepsilon = {e_planet:.4f}$\n$\ e = {np.degrees(eps_planet):.2f}^\\circ$',
+         transform=plt.gca().transAxes, fontsize=14, verticalalignment='top')
+
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
