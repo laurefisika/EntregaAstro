@@ -74,7 +74,7 @@ plt.scatter(az, alt, label='Stellarium', s=3, color='blue')
 plt.title("Analema observat des de Bellaterra 2025")
 plt.xlabel("Azimut (°)")
 plt.ylabel("Altitud (°)")
-plt.legend()
+plt.legend(fontsize=20)
 plt.grid(True)
 plt.show()
 
