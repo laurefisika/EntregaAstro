@@ -1,0 +1,83 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Simulació d'un analema a les 12:00h (clock time)
+# Dades------------------------------------------------
+
+# Paràmetres de l'òrbita de la Terra
+e = 0.0176
+epsilon = np.radians(23.45)
+P = np.radians(12.9)
+T = 365.25
+
+# Coordenates Bellaterra
+phi = np.radians(41.505789)  # latitud
+landa = np.radians(2.089509)  # longitud est
+
+# EQUATIONS--------------------------------------------------
+
+def Mean_anomaly(N):  # Anomalia mitjana per al dia N
+    return 2 * np.pi * (N - 3) / T
+
+def equation_of_time(N):
+    M = Mean_anomaly(N)
+    return (-2 * e * np.sin(M) - (np.tan(epsilon / 2))**2 * np.sin(2 * (M + P)))  # radians
+
+def hour_angle_true(N):
+    EOT = equation_of_time(N)  # radians
+    delta_long = np.degrees(landa) - 15  # 15°E = meridià horari oficial per UTC+1
+    HA = np.radians(delta_long - np.degrees(EOT))  # radians
+    return HA
+
+def delta(N):  # Declinació del Sol
+    return -epsilon * np.cos((2 * np.pi * (N + 10)) / T)
+
+def altitude(HA, d):  # Altitud del Sol
+    return np.arcsin(np.sin(phi) * np.sin(d) + np.cos(phi) * np.cos(d) * np.cos(HA))
+
+def azimuth(d, h, HA):  # Azimut del Sol
+    cosA = (np.sin(d) - np.sin(phi) * np.sin(h)) / (np.cos(phi) * np.cos(h))
+    cosA = np.clip(cosA, -1, 1)
+    A = np.arccos(cosA)
+    if HA > 0:
+        A = 2 * np.pi - A
+    return A
+
+# LOOP---------------------------------------------------------
+days = []
+altitude_list = []
+azimuth_list = []
+
+for i in range(1, 366):
+    H = hour_angle_true(i)
+    dec = delta(i)
+    alt = altitude(H, dec)
+    az = azimuth(dec, alt, H)
+    altitude_list.append(np.degrees(alt))
+    azimuth_list.append(np.degrees(az))
+
+# Comparem amb les dades d'Stellarium
+
+file_path = '/Users/laurarodriguez/Desktop/AnalSol.xlsx' 
+
+df = pd.read_excel(file_path, sheet_name="Sun")
+
+# Eliminem símbols "°" i convertim a float
+az = df["Azimuth"].astype(str).str.replace("°", "").str.strip().astype(float)
+alt= df["Altitude"].astype(str).str.replace("°", "").str.strip().astype(float)
+
+# PLOT-----------------------------------------------------
+plt.figure(figsize=(10, 18))
+plt.scatter(azimuth_list, altitude_list, label='Simulat', s=4, color='red')
+plt.scatter(az, alt, label='Stellarium', s=3, color='blue')
+plt.title("Analema observat des de Bellaterra 2025")
+plt.xlabel("Azimut (°)")
+plt.ylabel("Altitud (°)")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+
+
